@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f6fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12141c" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="點卷棒：班級考卷繳交燈號追蹤">
+  <title>點卷棒</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">📋</span>
+        <h1>點卷棒</h1>
+      </div>
+
+      <div class="stats" aria-live="polite">
+        <div class="stat stat-done"><b id="n-done">0</b><span>已繳交</span></div>
+        <div class="stat stat-pending"><b id="n-pending">0</b><span>未繳交</span></div>
+        <div class="stat stat-issue"><b id="n-issue">0</b><span>有狀況</span></div>
+      </div>
+
+      <button id="btn-settings" class="icon-btn" type="button" aria-label="設定">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="bar-fill"></i></div>
+  </header>
+
+  <main>
+    <p class="legend">
+      <span><i class="dot dot-pending"></i>未繳交</span>
+      <span><i class="dot dot-done"></i>點擊：已繳交</span>
+      <span><i class="dot dot-issue"></i>長按：有狀況</span>
+      <span id="progress-text" class="progress-text"></span>
+    </p>
+
+    <div id="board" class="board"></div>
+    <p id="empty" class="empty" hidden>所有班級都已停用，請到設定開啟。</p>
+  </main>
+
+  <!-- Settings -->
+  <dialog id="dlg-settings" class="dialog dialog-settings" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <h2 id="settings-title">設定</h2>
+      <button class="icon-btn" type="button" data-close aria-label="關閉">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <label class="row">
+        <span class="row-text">
+          <strong>點擊前先確認</strong>
+          <small>避免誤觸改變燈號</small>
+        </span>
+        <input id="opt-confirm" class="switch" type="checkbox" role="switch">
+      </label>
+
+      <section class="picker">
+        <div class="segmented" role="tablist">
+          <button type="button" role="tab" data-mode="exempt" aria-selected="true">本節免繳 <em id="cnt-exempt">0</em></button>
+          <button type="button" role="tab" data-mode="disabled" aria-selected="false">停用班級 <em id="cnt-disabled">0</em></button>
+        </div>
+        <p id="picker-hint" class="picker-hint"></p>
+        <div id="picker-grid" class="picker-grid"></div>
+      </section>
+
+      <div class="row row-danger">
+        <span class="row-text">
+          <strong>重置全部</strong>
+          <small>燈號回到未繳交，並清空本節免繳</small>
+        </span>
+        <button id="btn-reset" class="btn btn-danger" type="button">重置</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Confirm -->
+  <dialog id="dlg-confirm" class="dialog dialog-confirm" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-msg"></p>
+      <div class="dialog-actions">
+        <button class="btn" value="cancel">取消</button>
+        <button id="confirm-ok" class="btn btn-primary" value="ok" autofocus>確認</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
